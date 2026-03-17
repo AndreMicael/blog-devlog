@@ -212,52 +212,82 @@ def get_commit_details(owner, repo, sha, github_token):
 
 
 def build_prompt(commits_data, language, repo_name, repo_url):
-    """Monta o prompt para o Gemini com todos os commits do dia."""
+    """Monta o prompt com contexto rico de todos os commits."""
     commits_summary = []
-    for i, (commit, detail, _) in enumerate(commits_data, 1):
+    all_diffs = []
+
+    for i, (commit, detail, diff) in enumerate(commits_data, 1):
         sha = commit["sha"][:7]
         message = commit["commit"]["message"].replace("--post", "").strip()
         author = commit["commit"]["author"]["name"]
         date = commit["commit"]["author"]["date"]
-        files_changed = [f["filename"] for f in detail.get("files", [])][:10]
+
+        files = detail.get("files", [])
+        files_changed = [f["filename"] for f in files][:15]
+        additions = sum(f.get("additions", 0) for f in files)
+        deletions = sum(f.get("deletions", 0) for f in files)
 
         commits_summary.append(
-            f"**Commit {i}** (`{sha}`):\n"
+            f"**Commit {i}** (`{sha}`) — {date}\n"
             f"- Mensagem: {message}\n"
             f"- Autor: {author}\n"
-            f"- Data: {date}\n"
-            f"- Arquivos: {', '.join(files_changed) if files_changed else 'N/A'}"
+            f"- Estatísticas: +{additions} linhas adicionadas / -{deletions} removidas\n"
+            f"- Arquivos alterados ({len(files_changed)}): {', '.join(files_changed) if files_changed else 'N/A'}"
         )
 
-    # Usa o diff do commit mais recente para contexto de código
-    latest_diff = commits_data[0][2] if commits_data else ""
+        if diff:
+            all_diffs.append(f"--- diff do commit {sha} ---\n{diff[:2500]}")
 
     commits_text = "\n\n".join(commits_summary)
+    diffs_text   = "\n\n".join(all_diffs) if all_diffs else "Não disponível"
 
-    return f"""Você é um escritor técnico de blog de desenvolvimento de software.
-Com base nos commits abaixo do repositório "{repo_name}", escreva um post de blog em {language}.
+    return f"""Você é um engenheiro de software sênior que escreve um blog técnico detalhado sobre o próprio trabalho.
+Seu objetivo é escrever um post genuinamente informativo sobre as mudanças feitas no repositório "{repo_name}".
 
-REGRAS:
-- Escreva em tom técnico mas acessível
-- Explique O QUE foi feito e POR QUE (infira o motivo pelo contexto)
-- Entre 300 e 500 palavras de conteúdo
-- Use Markdown com subtítulos (##), listas e destaque de código quando relevante
-- NÃO inclua frontmatter YAML (---) — só o conteúdo
-- A PRIMEIRA LINHA deve ser um título com H1 (# Título aqui)
-- Não seja genérico: mencione especificamente o que mudou
+═══════════════════════════════
+INSTRUÇÕES OBRIGATÓRIAS
+═══════════════════════════════
+
+TÍTULO:
+- Crie um título específico e descritivo que reflita EXATAMENTE o que foi feito
+- Evite títulos genéricos como "Atualização do sistema" ou "Melhorias gerais"
+- Exemplos de bons títulos: "Refatoração do componente de inputs do Novo Contrato para melhor UX"
+  ou "Correção de bug crítico no build: resolvendo conflito de dependências no Frontend"
+- O título deve ter entre 8 e 16 palavras e ser autoexplicativo
+
+CONTEÚDO (entre 500 e 700 palavras):
+- Seção "O que foi feito": descreva cada mudança de forma clara e técnica
+  → Mencione os arquivos específicos que foram alterados e o que mudou neles
+  → Se houver código no diff, cite trechos relevantes usando blocos ```código```
+- Seção "Por que foi feito": explique a motivação por trás das mudanças
+  → Infira o problema que estava sendo resolvido ou a melhoria buscada
+  → Contextualize: estava causando bug? Melhorando performance? Preparando nova feature?
+- Seção "Impacto": descreva o resultado prático dessas mudanças
+  → O que o usuário final ou o sistema vai perceber de diferente?
+  → Existe algum risco ou ponto de atenção?
+
+FORMATAÇÃO:
+- Use Markdown com ## para subtítulos, listas com - e blocos ```código``` quando citar código
+- Seja direto e preciso — não use frases vazias como "essas mudanças são importantes"
+- NÃO inclua frontmatter YAML (---) — só o conteúdo em Markdown
+- A PRIMEIRA LINHA deve obrigatoriamente ser o título no formato: # Título aqui
+
+═══════════════════════════════
+DADOS DOS COMMITS
+═══════════════════════════════
 
 REPOSITÓRIO: {repo_name}
 URL: {repo_url}
 
-COMMITS:
 {commits_text}
 
-DIFF DO COMMIT MAIS RECENTE (para contexto):
-```
-{latest_diff}
-```
+═══════════════════════════════
+DIFFS (código real alterado)
+═══════════════════════════════
 
-Escreva o post:"""
+{diffs_text}
+
+Escreva o post agora:"""
 
 
 def generate_post_content(commits_data, language, repo_name, repo_url, groq_api_key):
