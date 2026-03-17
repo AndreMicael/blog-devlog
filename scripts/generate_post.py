@@ -154,11 +154,71 @@ def slugify(text):
     return text[:60]
 
 
+def detect_categories_and_tags(repo_name, commits_data):
+    """Detecta categorias e tags a partir do nome do repo e arquivos alterados."""
+    all_files = []
+    for _, detail, _ in commits_data:
+        all_files += [f["filename"] for f in detail.get("files", [])]
+
+    all_files_str = " ".join(all_files).lower()
+    messages = " ".join(
+        c[0]["commit"]["message"].lower() for c in commits_data
+    )
+
+    # Categoria principal baseada no repo
+    repo_lower = repo_name.lower()
+    if "frontend" in repo_lower or "front" in repo_lower:
+        category = "Frontend"
+    elif "backend" in repo_lower or "back" in repo_lower or "api" in repo_lower:
+        category = "Backend"
+    elif "mobile" in repo_lower or "app" in repo_lower:
+        category = "Mobile"
+    elif "infra" in repo_lower or "devops" in repo_lower or "deploy" in repo_lower:
+        category = "DevOps"
+    else:
+        category = "Desenvolvimento"
+
+    # Tags baseadas em arquivos e mensagens de commit
+    tags = set()
+    tags.add(repo_name.replace("-", " "))
+
+    tag_rules = {
+        "React": [".jsx", ".tsx", "react", "component"],
+        "Vue": [".vue", "vuex", "nuxt"],
+        "Angular": ["angular", ".component.ts"],
+        "TypeScript": [".ts", ".tsx", "typescript"],
+        "JavaScript": [".js", ".jsx", "javascript"],
+        "Python": [".py", "python", "django", "flask", "fastapi"],
+        "Java": [".java", "spring", "maven", "gradle"],
+        "Docker": ["dockerfile", "docker-compose", "container"],
+        "CI/CD": [".github/workflows", ".gitlab-ci", "pipeline"],
+        "banco de dados": [".sql", "migration", "model", "schema", "database"],
+        "API": ["api", "endpoint", "route", "controller", "swagger"],
+        "testes": ["test", "spec", ".test.", ".spec.", "jest", "pytest"],
+        "autenticação": ["auth", "login", "jwt", "token", "oauth"],
+        "UI": [".css", ".scss", ".sass", "style", "layout", "component"],
+        "bugfix": ["fix", "bug", "correção", "corrig"],
+        "feature": ["feat", "nova", "new feature", "adiciona", "implement"],
+        "refatoração": ["refactor", "refatora", "cleanup", "clean up"],
+        "documentação": ["docs", "readme", "documentation", ".md"],
+    }
+
+    combined = all_files_str + " " + messages
+    for tag, keywords in tag_rules.items():
+        if any(kw in combined for kw in keywords):
+            tags.add(tag)
+
+    # Limita a 6 tags para não poluir
+    tag_list = list(tags)[:6]
+
+    return category, tag_list
+
+
 def write_jekyll_post(content, repo_name, repo_url, commits_data):
     """Escreve o arquivo .md no formato Jekyll em _posts/."""
     lines = content.strip().split("\n")
 
-    # Extrai título do H1 gerado pelo Gemini
+    # Extrai título do H1 gerado pela IA
     post_title = f"Atualização em {repo_name}"
     body_lines = lines
     if lines and lines[0].startswith("# "):
@@ -181,7 +241,9 @@ def write_jekyll_post(content, repo_name, repo_url, commits_data):
         commit_links.append(f"[`{short_sha}`]({repo_url}/commit/{sha})")
 
     links_text = ", ".join(commit_links)
-    tags = [repo_name.replace("-", " "), "desenvolvimento", "open source"]
+
+    # Categorias e tags inteligentes
+    category, tags = detect_categories_and_tags(repo_name, commits_data)
 
     safe_title = post_title.replace('"', "'")
     filename = f"{date_for_file}-{slugify(repo_name)}-{slugify(post_title)[:40]}.md"
@@ -190,7 +252,7 @@ def write_jekyll_post(content, repo_name, repo_url, commits_data):
 layout: post
 title: "{safe_title}"
 date: {date_for_frontmatter}
-categories: [desenvolvimento, commits]
+categories: [{category}]
 tags: {json.dumps(tags, ensure_ascii=False)}
 repo: "{repo_url}"
 ---

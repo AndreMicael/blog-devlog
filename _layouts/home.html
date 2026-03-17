@@ -1,0 +1,45 @@
+---
+layout: default
+---
+
+<div class="posts-list">
+  {% if site.posts.size == 0 %}
+    <div class="no-posts">
+      <p>Nenhum post ainda. O blog é atualizado automaticamente quando há novos commits nos projetos monitorados.</p>
+    </div>
+  {% else %}
+    {% for post in paginator.posts | default: site.posts %}
+    <article class="post-card">
+      <div class="post-card-header">
+        <div class="post-meta-top">
+          {% for category in post.categories %}
+            <a href="{{ '/categories/' | relative_url }}#{{ category | slugify }}" class="post-category">{{ category }}</a>
+          {% endfor %}
+        </div>
+        <h2 class="post-card-title">
+          <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+        </h2>
+        <div class="post-meta">
+          <span class="post-date">📅 {{ post.date | date: "%d/%m/%Y" }}</span>
+          {% if post.repo %}
+            <span class="post-repo">🔗 <a href="{{ post.repo }}" target="_blank">{{ post.repo | split: '/' | last }}</a></span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="post-card-body">
+        <p class="post-excerpt">{{ post.excerpt | strip_html | truncate: 250 }}</p>
+      </div>
+
+      <div class="post-card-footer">
+        <div class="post-tags">
+          {% for tag in post.tags limit: 4 %}
+            <a href="{{ '/tags/' | relative_url }}#{{ tag | slugify }}" class="post-tag">{{ tag }}</a>
+          {% endfor %}
+        </div>
+        <a href="{{ post.url | relative_url }}" class="read-more">Leia mais &raquo;</a>
+      </div>
+    </article>
+    {% endfor %}
+  {% endif %}
+</div>

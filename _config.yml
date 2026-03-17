@@ -5,12 +5,18 @@ baseurl: "/blog-eucomittei"
 author:
   name: "Andre Sampaio"
 
-theme: minima
-
 plugins:
   - jekyll-feed
+  - jekyll-sitemap
 
 show_excerpts: true
+excerpt_separator: <!--more-->
 
-minima:
-  date_format: "%d/%m/%Y"
+date_format: "%d/%m/%Y"
+
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
