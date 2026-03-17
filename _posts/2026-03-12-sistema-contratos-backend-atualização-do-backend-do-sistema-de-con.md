@@ -1,10 +1,17 @@
 ---
 layout: post
-title: "Atualização do backend do Sistema de Contratos com melhorias nos controllers e schema do Prisma"
-date: 2026-03-12 18:35:04 +0000
-categories: [Backend]
-tags: ["Sistema Contratos Backend", "JavaScript", "banco de dados", "TypeScript", "documentação", "CI/CD"]
-repo: "https://github.com/Desenvolve-MT/Sistema-Contratos-Backend"
+title: Atualização do backend do Sistema de Contratos com melhorias nos controllers e schema do Prisma
+date: 2026-03-12 14:35:00 -0400
+categories:
+  - Backend
+tags:
+  - Sistema Contratos Backend
+  - JavaScript
+  - banco de dados
+  - TypeScript
+  - documentação
+  - CI/CD
+repo: https://github.com/Desenvolve-MT/Sistema-Contratos-Backend
 ---
 
 ## O que foi feito
@@ -77,5 +84,6 @@ As mudanças foram feitas para corrigir problemas existentes, melhorar a perform
 
 A integração de branches e a configuração do deploy com aprovação de duas pessoas diferentes foram feitas para garantir a qualidade e a segurança das alterações enviadas para produção. Isso ajuda a prevenir erros críticos e garantir que as atualizações sejam testadas e
 
----
-*Post gerado automaticamente a partir dos commits [`3936c49`](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/3936c496b2107e435a960c33a100b5367716490d), [`f034105`](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/f03410587ec2c268dbcb8a6346635db64c90da44), [`142abf5`](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/142abf5376ca8c506bdbd45d763ee010c9383525), [`45963c2`](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/45963c28b4f77ee0588af597eaf273ee579c6434), [`803156a`](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/803156ad8b8ccf0f91b0469a9c86eb7f34603b6e) em [Sistema-Contratos-Backend](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend)*
+***
+
+_Post gerado automaticamente a partir dos commits _[_`3936c49`_](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/3936c496b2107e435a960c33a100b5367716490d)_, _[_`f034105`_](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/f03410587ec2c268dbcb8a6346635db64c90da44)_, _[_`142abf5`_](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/142abf5376ca8c506bdbd45d763ee010c9383525)_, _[_`45963c2`_](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/45963c28b4f77ee0588af597eaf273ee579c6434)_, _[_`803156a`_](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend/commit/803156ad8b8ccf0f91b0469a9c86eb7f34603b6e)_ em _[_Sistema-Contratos-Backend_](https://github.com/Desenvolve-MT/Sistema-Contratos-Backend)
