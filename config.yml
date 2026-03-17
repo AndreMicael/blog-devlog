@@ -4,7 +4,7 @@
 language: "português"
 
 # Máximo de commits por repositório para incluir em um post
-max_commits_per_repo: 5
+max_commits_per_repo: 10
 
 # Lista de repositórios para monitorar
 repos:
