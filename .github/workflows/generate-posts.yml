@@ -1,20 +1,26 @@
-name: Gerar Posts do Blog a partir de Commits
+name: Gerar e Publicar Posts do Blog
 
 on:
   schedule:
     # Roda todo dia às 9h (horário UTC = 6h BRT)
-    # Para mudar: https://crontab.guru
     - cron: "0 12 * * *"
 
   # Permite rodar manualmente pelo painel do GitHub Actions
   workflow_dispatch:
 
-jobs:
-  generate-posts:
-    runs-on: ubuntu-latest
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
-    permissions:
-      contents: write  # Necessário para commitar os posts gerados
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  gerar-posts:
+    name: Gerar Posts com IA
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout do repositório
@@ -51,17 +57,52 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/generate_post.py
 
-      - name: Commitar e publicar posts gerados
+      - name: Commitar posts gerados
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           mkdir -p _posts
           git add _posts/ last_processed.json 2>/dev/null || true
-          # Só faz commit se houver mudanças
           if git diff --staged --quiet; then
             echo "Nenhum post novo para commitar."
           else
             git commit -m "blog: posts gerados automaticamente [skip ci]"
             git push
-            echo "Posts publicados com sucesso!"
+            echo "Posts commitados com sucesso!"
           fi
+
+  build-jekyll:
+    name: Build do Jekyll
+    runs-on: ubuntu-latest
+    needs: gerar-posts
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build com Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    name: Deploy no GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-jekyll
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy para GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
