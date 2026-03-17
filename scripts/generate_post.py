@@ -86,7 +86,11 @@ def get_new_commits(owner, repo, last_processed_data, github_token):
 
     # Primeira execução: processa só o commit mais recente
     if not last_sha:
-        return commits[:1]
+        latest = commits[0]
+        # Já na primeira execução respeita --post
+        if "--post" in latest["commit"]["message"]:
+            return [latest]
+        return [latest]
 
     # Coleta commits novos (antes de encontrar o last_sha)
     new_commits = []
@@ -98,7 +102,18 @@ def get_new_commits(owner, repo, last_processed_data, github_token):
     # Filtra qualquer SHA que já esteja no histórico (segurança extra)
     new_commits = [c for c in new_commits if c["sha"] not in processed_set]
 
-    return new_commits
+    # Commits já processados mas marcados com --post: força reprocessamento
+    force_commits = [
+        c for c in commits
+        if c["sha"] in processed_set
+        and "--post" in c["commit"]["message"]
+        and c["sha"] not in [nc["sha"] for nc in new_commits]
+    ]
+
+    if force_commits:
+        print(f"  {len(force_commits)} commit(s) forçado(s) via --post")
+
+    return new_commits + force_commits
 
 
 def get_commit_details(owner, repo, sha, github_token):
@@ -121,7 +136,7 @@ def build_prompt(commits_data, language, repo_name, repo_url):
     commits_summary = []
     for i, (commit, detail, _) in enumerate(commits_data, 1):
         sha = commit["sha"][:7]
-        message = commit["commit"]["message"]
+        message = commit["commit"]["message"].replace("--post", "").strip()
         author = commit["commit"]["author"]["name"]
         date = commit["commit"]["author"]["date"]
         files_changed = [f["filename"] for f in detail.get("files", [])][:10]
