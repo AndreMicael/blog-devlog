@@ -8,7 +8,7 @@ layout: default
       <p>Nenhum post ainda. O blog é atualizado automaticamente quando há novos commits nos projetos monitorados.</p>
     </div>
   {% else %}
-    {% for post in paginator.posts | default: site.posts %}
+    {% for post in site.posts %}
     <article class="post-card">
       <div class="post-card-header">
         <div class="post-meta-top">
@@ -28,7 +28,7 @@ layout: default
       </div>
 
       <div class="post-card-body">
-        <p class="post-excerpt">{{ post.excerpt | strip_html | truncate: 250 }}</p>
+        <p class="post-excerpt">{{ post.content | strip_html | truncate: 250 }}</p>
       </div>
 
       <div class="post-card-footer">

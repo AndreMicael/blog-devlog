@@ -10,7 +10,6 @@ plugins:
   - jekyll-sitemap
 
 show_excerpts: true
-excerpt_separator: <!--more-->
 
 date_format: "%d/%m/%Y"
 
