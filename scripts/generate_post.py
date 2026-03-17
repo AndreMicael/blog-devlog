@@ -96,7 +96,7 @@ def get_blog_post_tags(owner, repo, github_token):
     return [t for t in response.json() if t["name"].startswith("blog-post-")]
 
 
-def get_commit_groups(owner, repo, last_processed_data, github_token, max_per_group):
+def get_commit_groups(owner, repo, last_processed_data, github_token, max_per_group, branch=None):
     """
     Retorna lista de (group, tag_name) para gerar posts.
 
@@ -106,7 +106,10 @@ def get_commit_groups(owner, repo, last_processed_data, github_token, max_per_gr
       3. Normal: todos os commits novos → um post
     """
     url = f"https://api.github.com/repos/{owner}/{repo}/commits"
-    response = github_get(url, github_token, params={"per_page": 50})
+    params = {"per_page": 50}
+    if branch:
+        params["sha"] = branch
+    response = github_get(url, github_token, params=params)
     commits = response.json()  # mais novo primeiro
 
     if not commits:
@@ -420,13 +423,14 @@ def main():
     for repo_config in repos:
         owner = repo_config["owner"]
         repo = repo_config["name"]
+        branch = repo_config.get("branch")  # opcional; None = branch padrão do repo
         repo_key = f"{owner}/{repo}"
         repo_url = f"https://github.com/{owner}/{repo}"
 
-        print(f"\nProcessando {repo_key}...")
+        print(f"\nProcessando {repo_key} (branch: {branch or 'padrão'})...")
 
         try:
-            groups = get_commit_groups(owner, repo, last_processed, github_token, max_commits_per_repo)
+            groups = get_commit_groups(owner, repo, last_processed, github_token, max_commits_per_repo, branch=branch)
 
             if not groups:
                 print(f"  Nenhum commit para processar em {repo_key} — pulando.")

@@ -10,6 +10,8 @@ max_commits_per_repo: 5
 repos:
   - owner: Desenvolve-MT
     name: Sistema-Contratos-Frontend
+    branch: dev
 
   - owner: Desenvolve-MT
     name: Sistema-Contratos-Backend
+    branch: dev
