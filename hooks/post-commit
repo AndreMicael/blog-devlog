@@ -1,0 +1,13 @@
+#!/bin/sh
+# Hook: post-commit
+# Cria tag blog-post-XXXXXXX se --post foi usado no commit
+
+PENDING="$(git rev-parse --git-dir)/BLOG_POST_PENDING"
+
+if [ -f "$PENDING" ]; then
+    rm "$PENDING"
+    SHA=$(git rev-parse --short HEAD)
+    TAG_NAME="blog-post-${SHA}"
+    git tag "$TAG_NAME"
+    echo "✅ Tag '${TAG_NAME}' criada — o blog vai gerar um post para este commit."
+fi

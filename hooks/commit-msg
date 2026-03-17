@@ -1,0 +1,14 @@
+#!/bin/sh
+# Hook: commit-msg
+# Remove --post da mensagem e cria flag para o post-commit
+
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+if printf '%s' "$MSG" | grep -q -- '--post'; then
+    # Remove --post da mensagem (não vai aparecer no GitHub)
+    printf '%s' "$MSG" | sed 's/ --post//g; s/--post //g; s/--post//g' > "$MSG_FILE"
+    # Sinaliza para o post-commit criar a tag
+    touch "$(git rev-parse --git-dir)/BLOG_POST_PENDING"
+    echo "🏷️  --post detectado: mensagem limpa, tag será criada após o commit."
+fi

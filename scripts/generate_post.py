@@ -27,10 +27,12 @@ def load_last_processed():
     if path.exists():
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        # Migra formato antigo {repo: "sha"} para novo {repo: {last_sha, processed: []}}
+        # Migra formatos antigos para o novo com last_post_sha
         for key, value in data.items():
             if isinstance(value, str):
-                data[key] = {"last_sha": value, "processed": [value]}
+                data[key] = {"last_sha": value, "last_post_sha": value, "processed": [value]}
+            elif isinstance(value, dict) and "last_post_sha" not in value:
+                value["last_post_sha"] = value.get("last_sha")
         return data
     return {}
 
@@ -49,16 +51,33 @@ def is_already_processed(repo_key, sha, last_processed):
     return sha in repo_data.get("processed", [])
 
 
-def mark_as_processed(repo_key, sha, last_processed):
-    """Registra o SHA como processado, mantendo histórico dos últimos 200."""
+def mark_group_as_processed(repo_key, group_commits, last_processed, tag_name=None):
+    """
+    Registra todos os commits do grupo como processados.
+    last_sha aponta para o commit mais novo do grupo.
+    Se veio de uma tag, registra também o nome da tag.
+    """
     if repo_key not in last_processed:
-        last_processed[repo_key] = {"last_sha": sha, "processed": []}
+        last_processed[repo_key] = {"last_sha": "", "last_post_sha": "", "processed": [], "processed_tags": []}
+
     repo_data = last_processed[repo_key]
-    repo_data["last_sha"] = sha
-    if sha not in repo_data["processed"]:
-        repo_data["processed"].append(sha)
-    # Limita histórico para não crescer demais
+    if "processed_tags" not in repo_data:
+        repo_data["processed_tags"] = []
+
+    post_sha = group_commits[0]["sha"]
+    repo_data["last_sha"] = post_sha
+    repo_data["last_post_sha"] = post_sha
+
+    for commit in group_commits:
+        sha = commit["sha"]
+        if sha not in repo_data["processed"]:
+            repo_data["processed"].append(sha)
+
+    if tag_name and tag_name not in repo_data["processed_tags"]:
+        repo_data["processed_tags"].append(tag_name)
+
     repo_data["processed"] = repo_data["processed"][-200:]
+    repo_data["processed_tags"] = repo_data["processed_tags"][-100:]
 
 
 def github_get(url, github_token, params=None, accept=None):
@@ -70,50 +89,102 @@ def github_get(url, github_token, params=None, accept=None):
     return response
 
 
-def get_new_commits(owner, repo, last_processed_data, github_token):
-    """Retorna commits não processados ainda para este repo."""
+def get_blog_post_tags(owner, repo, github_token):
+    """Busca tags blog-post-* do repositório."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/tags"
+    response = github_get(url, github_token, params={"per_page": 100})
+    return [t for t in response.json() if t["name"].startswith("blog-post-")]
+
+
+def get_commit_groups(owner, repo, last_processed_data, github_token, max_per_group):
+    """
+    Retorna lista de (group, tag_name) para gerar posts.
+
+    Prioridade:
+      1. Tags blog-post-* (commit limpo no GitHub, sem --post na mensagem)
+      2. --post na mensagem de commit (modo legado)
+      3. Normal: todos os commits novos → um post
+    """
     url = f"https://api.github.com/repos/{owner}/{repo}/commits"
-    response = github_get(url, github_token, params={"per_page": 30})
-    commits = response.json()
+    response = github_get(url, github_token, params={"per_page": 50})
+    commits = response.json()  # mais novo primeiro
 
     if not commits:
         return []
 
     repo_key = f"{owner}/{repo}"
     repo_data = last_processed_data.get(repo_key, {})
-    last_sha = repo_data.get("last_sha") if isinstance(repo_data, dict) else repo_data
-    processed_set = set(repo_data.get("processed", [])) if isinstance(repo_data, dict) else {repo_data}
+    if isinstance(repo_data, str):
+        repo_data = {"last_sha": repo_data, "last_post_sha": repo_data, "processed": [repo_data], "processed_tags": []}
+        last_processed_data[repo_key] = repo_data
+
+    last_sha = repo_data.get("last_sha")
+    processed_set = set(repo_data.get("processed", []))
+    processed_tags = set(repo_data.get("processed_tags", []))
 
     # Primeira execução: processa só o commit mais recente
     if not last_sha:
-        latest = commits[0]
-        # Já na primeira execução respeita --post
-        if "--post" in latest["commit"]["message"]:
-            return [latest]
-        return [latest]
+        return [(commits[:1], None)]
 
-    # Coleta commits novos (antes de encontrar o last_sha)
-    new_commits = []
+    # Coleta commits não processados
+    unprocessed = []
     for commit in commits:
-        if commit["sha"] == last_sha:
+        sha = commit["sha"]
+        if sha == last_sha or sha in processed_set:
             break
-        new_commits.append(commit)
+        unprocessed.append(commit)  # mais novo primeiro
 
-    # Filtra qualquer SHA que já esteja no histórico (segurança extra)
-    new_commits = [c for c in new_commits if c["sha"] not in processed_set]
+    if not unprocessed:
+        return []
 
-    # Commits já processados mas marcados com --post: força reprocessamento
-    force_commits = [
-        c for c in commits
-        if c["sha"] in processed_set
-        and "--post" in c["commit"]["message"]
-        and c["sha"] not in [nc["sha"] for nc in new_commits]
+    unprocessed_shas = {c["sha"] for c in unprocessed}
+
+    # ── Modo 1: Tags blog-post-* (método limpo, sem trace na mensagem) ──
+    all_tags = get_blog_post_tags(owner, repo, github_token)
+    new_tags = [
+        t for t in all_tags
+        if t["name"] not in processed_tags
+        and t["commit"]["sha"] in unprocessed_shas
     ]
 
-    if force_commits:
-        print(f"  {len(force_commits)} commit(s) forçado(s) via --post")
+    if new_tags:
+        # Encontra posição de cada tag no unprocessed (mais novo primeiro)
+        sha_to_index = {c["sha"]: i for i, c in enumerate(unprocessed)}
+        tag_positions = sorted(
+            [(sha_to_index[t["commit"]["sha"]], t["name"]) for t in new_tags],
+            reverse=True  # do mais antigo ao mais novo
+        )
 
-    return new_commits + force_commits
+        groups = []
+        prev_boundary = len(unprocessed)
+        for pos, tag_name in tag_positions:
+            group = unprocessed[pos:prev_boundary]
+            groups.insert(0, (group[:max_per_group], tag_name))
+            prev_boundary = pos
+
+        pending = prev_boundary
+        if pending > 0:
+            print(f"  {pending} commit(s) pendentes aguardando próxima tag blog-post-*")
+        return groups
+
+    # ── Modo 2: --post na mensagem (legado, para quem não instalou os hooks) ──
+    post_indices = [i for i, c in enumerate(unprocessed) if "--post" in c["commit"]["message"]]
+
+    if post_indices:
+        groups = []
+        prev_boundary = len(unprocessed)
+        for pos in sorted(post_indices, reverse=True):
+            group = unprocessed[pos:prev_boundary]
+            groups.insert(0, (group[:max_per_group], None))
+            prev_boundary = pos
+
+        pending = prev_boundary
+        if pending > 0:
+            print(f"  {pending} commit(s) pendentes aguardando próximo --post")
+        return groups
+
+    # ── Modo 3: Normal — todos os commits novos → um post ──
+    return [(unprocessed[:max_per_group], None)]
 
 
 def get_commit_details(owner, repo, sha, github_token):
@@ -355,38 +426,39 @@ def main():
         print(f"\nProcessando {repo_key}...")
 
         try:
-            new_commits = get_new_commits(owner, repo, last_processed, github_token)
+            groups = get_commit_groups(owner, repo, last_processed, github_token, max_commits_per_repo)
 
-            if not new_commits:
-                print(f"  Nenhum commit novo em {repo_key} — pulando.")
+            if not groups:
+                print(f"  Nenhum commit para processar em {repo_key} — pulando.")
                 continue
 
-            # Limita para evitar posts muito longos
-            new_commits = new_commits[:max_commits_per_repo]
-            print(f"  Encontrados {len(new_commits)} commit(s) novo(s)")
+            print(f"  {len(groups)} grupo(s) de commits para gerar post(s)")
 
-            # Busca detalhes de cada commit
-            commits_data = []
-            for commit in new_commits:
-                sha = commit["sha"]
-                print(f"  Buscando detalhes do commit {sha[:7]}...")
-                detail, diff = get_commit_details(owner, repo, sha, github_token)
-                commits_data.append((commit, detail, diff))
+            for group, tag_name in groups:
+                source = f"tag {tag_name}" if tag_name else "--post / normal"
+                print(f"  Grupo [{source}]: {len(group)} commit(s) — [{', '.join(c['sha'][:7] for c in group)}]")
 
-            # Gera post com Groq
-            print(f"  Gerando post com Groq...")
-            content = generate_post_content(
-                commits_data, language, repo, repo_url, groq_api_key
-            )
+                # Busca detalhes de cada commit do grupo
+                commits_data = []
+                for commit in group:
+                    sha = commit["sha"]
+                    print(f"    Buscando detalhes do commit {sha[:7]}...")
+                    detail, diff = get_commit_details(owner, repo, sha, github_token)
+                    commits_data.append((commit, detail, diff))
 
-            # Escreve arquivo Jekyll
-            filename = write_jekyll_post(content, repo, repo_url, commits_data)
-            generated_posts.append(filename)
-            print(f"  Post criado: {filename}")
+                # Gera post com Groq
+                print(f"    Gerando post com Groq...")
+                content = generate_post_content(
+                    commits_data, language, repo, repo_url, groq_api_key
+                )
 
-            # Registra todos os SHAs processados no histórico
-            for commit in new_commits:
-                mark_as_processed(repo_key, commit["sha"], last_processed)
+                # Escreve arquivo Jekyll
+                filename = write_jekyll_post(content, repo, repo_url, commits_data)
+                generated_posts.append(filename)
+                print(f"    Post criado: {filename}")
+
+                # Marca grupo e tag como processados
+                mark_group_as_processed(repo_key, group, last_processed, tag_name=tag_name)
 
         except requests.HTTPError as e:
             print(f"  ERRO ao acessar GitHub para {repo_key}: {e}", file=sys.stderr)
