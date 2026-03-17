@@ -112,7 +112,12 @@ def get_commit_groups(owner, repo, last_processed_data, github_token, max_per_gr
     response = github_get(url, github_token, params=params)
     commits = response.json()  # mais novo primeiro
 
+    print(f"  [DEBUG] API retornou {len(commits)} commit(s) da branch '{branch or 'padrão'}'")
+    if commits:
+        print(f"  [DEBUG] Commit mais novo: {commits[0]['sha'][:7]} — {commits[0]['commit']['message'][:60]!r}")
+
     if not commits:
+        print("  [DEBUG] Nenhum commit retornado pela API")
         return []
 
     repo_key = f"{owner}/{repo}"
@@ -125,17 +130,27 @@ def get_commit_groups(owner, repo, last_processed_data, github_token, max_per_gr
     processed_set = set(repo_data.get("processed", []))
     processed_tags = set(repo_data.get("processed_tags", []))
 
+    print(f"  [DEBUG] last_sha no cache: {last_sha!r}")
+    print(f"  [DEBUG] processed_set tem {len(processed_set)} SHA(s)")
+
     # Primeira execução: processa só o commit mais recente
     if not last_sha:
+        print("  [DEBUG] Primeira execução — processando commit mais recente")
         return [(commits[:1], None)]
 
     # Coleta commits não processados
     unprocessed = []
     for commit in commits:
         sha = commit["sha"]
-        if sha == last_sha or sha in processed_set:
+        if sha == last_sha:
+            print(f"  [DEBUG] Parou no last_sha: {sha[:7]}")
+            break
+        if sha in processed_set:
+            print(f"  [DEBUG] Parou em SHA já processado: {sha[:7]}")
             break
         unprocessed.append(commit)  # mais novo primeiro
+
+    print(f"  [DEBUG] {len(unprocessed)} commit(s) não processado(s) encontrado(s)")
 
     if not unprocessed:
         return []
