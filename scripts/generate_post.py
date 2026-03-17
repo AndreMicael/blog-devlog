@@ -134,7 +134,7 @@ Escreva o post:"""
 def generate_post_content(commits_data, language, repo_name, repo_url, gemini_api_key):
     """Chama Gemini para gerar o post."""
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.0-flash")
 
     prompt = build_prompt(commits_data, language, repo_name, repo_url)
 
