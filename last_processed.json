@@ -1,7 +1,7 @@
 {
   "Desenvolve-MT/Sistema-Contratos-Frontend": {
-    "last_sha": "f2eb76eb5e850463190a4617bcced5af926a18b7",
-    "last_post_sha": "f2eb76eb5e850463190a4617bcced5af926a18b7",
+    "last_sha": "f3263bcad4d29e4f2d783d6e7a7e886c893e201b",
+    "last_post_sha": "f3263bcad4d29e4f2d783d6e7a7e886c893e201b",
     "processed": [
       "f9c9d440004a8c183035d40d76dc407fb049637a",
       "4ff3df480a5d15dc94dba44031254d200c1fb2f2",
@@ -121,7 +121,17 @@
       "81b9dbe993d4a3d54509ba32d51866cbb1ccd8a4",
       "e06b39348fedbab43ae5b3e48214428ab1e25cec",
       "28ea1b0734c6a400d009b3e334e858ed52116e3c",
-      "2989a20a3e438cc139d8f6d72f62b51b037dec85"
+      "2989a20a3e438cc139d8f6d72f62b51b037dec85",
+      "f3263bcad4d29e4f2d783d6e7a7e886c893e201b",
+      "fc76a621f4df78960775ff8b8d8214f8b082577d",
+      "683df8c72fd52b4af3ea6322fa8248bcbda46b10",
+      "774e9dc390f60de7b9133c8a5fd4bff4955950fe",
+      "d5e174c4ac551945a6272d06a395d945d3f791b4",
+      "503f94ea7e3b36f57af5b85c4d0e2327ac083a92",
+      "62f277d416917754733854d872e21e3dfabc77e1",
+      "024f08ff04b3bdd078e410d852c2b78348732a1c",
+      "ef486b16f3d3e5a4418e6cfba708111b32a12178",
+      "74231a00a1c3134ab13fc2de68128de701404832"
     ],
     "processed_tags": []
   },
