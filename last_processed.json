@@ -1,9 +1,8 @@
 {
   "Desenvolve-MT/Sistema-Contratos-Frontend": {
-    "last_sha": "721dc5cd01995252c4153841d9d9960663b0084b",
-    "last_post_sha": "721dc5cd01995252c4153841d9d9960663b0084b",
+    "last_sha": "ac462cfaf2ea1b370e63296524a6980e6c82eafc",
+    "last_post_sha": "ac462cfaf2ea1b370e63296524a6980e6c82eafc",
     "processed": [
-      "9bf863532bf65361d8b4df48782f4fa6a25654a7",
       "4693dbae9c3a59c64e06412ce5e986ce32ccdcf9",
       "7fa1cf7bdc129253d5a97492c21164daf46b819a",
       "bc8012a0799f57550d637dcc6ed41cedaf432766",
@@ -202,7 +201,8 @@
       "721dc5cd01995252c4153841d9d9960663b0084b",
       "462c49c1f2e9e7e0ca4e52b3d39f92aeda329f55",
       "76f967b8fd18f4bfa5d19efd75d8dcc0c1cb31ca",
-      "e49bb8ca0ae90935980dbc21ee7248f84e7fe437"
+      "e49bb8ca0ae90935980dbc21ee7248f84e7fe437",
+      "ac462cfaf2ea1b370e63296524a6980e6c82eafc"
     ],
     "processed_tags": []
   },
